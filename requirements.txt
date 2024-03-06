@@ -1,0 +1,11 @@
+dash==2.0.0
+flask
+gunicorn
+pandas
+jinja2==2.11.3
+markupsafe==1.1.1
+dash-bootstrap-components
+dash-core-components
+dash-html-components
+dash-renderer
+plotly
