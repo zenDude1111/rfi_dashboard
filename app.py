@@ -1,34 +1,32 @@
-from dash import Dash, dcc, html, Input, Output, dash_table
+from dash import Dash, dcc, html, Input, Output, dash_table, callback_context
 import dash_bootstrap_components as dbc
 from datetime import date
 import pandas as pd
+import os  # Necessary for path operations
 
-# Assuming 'southpole_rfi_dashboard.py' exists in the 'pages' directory with a layout defined
+# Import the layout from the pages module
 from pages import rfi_explorer
 
-# Correct path to the CSV file in the assets folder
-df = pd.read_csv('assets/20240207_rfi_report.csv')
-
-# Initialize Dash app
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server  # Expose the Flask server for Gunicorn
+server = app.server
 
-# Define your navbar
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Main", href="/")),
         dbc.NavItem(dbc.NavLink("RFI Explorer", href="/rfi_explorer")),
     ],
-    brand="RFI Explorer",
+    brand="RFI Dashboard",
     brand_href="/",
     color="secondary",
     dark=True,
 )
 
-# Create the DataTable from the DataFrame
+# Initial setup for DataTable to ensure it exists before data is loaded
+initial_df = pd.DataFrame()
 data_table = dash_table.DataTable(
-    columns=[{"name": i, "id": i} for i in df.columns],
-    data=df.to_dict('records'),
+    id='rfi-data-table',
+    columns=[{"name": i, "id": i} for i in initial_df.columns],
+    data=initial_df.to_dict('records'),
     style_cell={'textAlign': 'left', 'padding': '5px'},
     style_header={
         'backgroundColor': 'rgb(30, 30, 30)',
@@ -42,72 +40,97 @@ data_table = dash_table.DataTable(
     style_table={'overflowX': 'auto'}
 )
 
-# Define the app layout
+# Define the main page layout
+def main_page_layout():
+    return html.Div([
+        dbc.Row([
+            dbc.Col([
+                html.P('Select a date for RFI data:'),
+                dcc.DatePickerSingle(
+                    id='rfi-date-picker',
+                    min_date_allowed=date(1995, 8, 5),
+                    max_date_allowed=date.today(),
+                    initial_visible_month=date.today(),
+                    date=date.today()
+                ),
+            ], width=12, lg=3),
+            dbc.Col([
+                dcc.Tabs(id="image-tabs", value='tab-1', children=[
+                    dcc.Tab(label='Signal Hound 1', value='tab-1'),
+                    dcc.Tab(label='Signal Hound 2', value='tab-2'),
+                    dcc.Tab(label='Signal Hound 3', value='tab-3'),
+                ]),
+            ], width=12, lg=9),
+        ]),
+        dbc.Row([
+            dbc.Col([
+                html.Div(id='tabs-content')
+            ], width=12),
+        ]),
+        dbc.Row([
+            dbc.Col([
+                html.H3('RFI Report'),
+                data_table
+            ], width=12),
+        ]),
+    ])
+
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     navbar,
-    html.Div(id='page-content')
+    html.Div(id='page-content'),
 ])
-
-# Define layout for landing page
-home_layout = html.Div([
-    dbc.Row([
-        dbc.Col([
-            html.P('Select a date for RFI data:'),
-            dcc.DatePickerSingle(
-                id='rfi-date-picker',
-                min_date_allowed=date(1995, 8, 5),
-                max_date_allowed=date.today(),
-                initial_visible_month=date.today(),
-                date=date.today()
-            ),
-        ], width=12, lg=3),
-        dbc.Col([
-            dcc.Tabs(id="image-tabs", value='tab-1', children=[
-                dcc.Tab(label='Signal Hound 1', value='tab-1'),
-                dcc.Tab(label='Signal Hound 2', value='tab-2'),
-                dcc.Tab(label='Signal Hound 3', value='tab-3'),
-            ]),
-        ], width=12, lg=9),
-    ]),
-    dbc.Row([
-        dbc.Col([
-            html.Div(id='tabs-content')
-        ], width=12),
-    ]),
-    dbc.Row([
-        dbc.Col([
-            html.H3('RFI Report'),
-            data_table
-        ], width=12),
-    ]),
-])
-
-# Define the callback for dynamic page loading
-@app.callback(Output('page-content', 'children'),
-              [Input('url', 'pathname')])
-def display_page(pathname):
-    if pathname == '/rfi_explorer':
-        return rfi_explorer.layout  
-    else:
-        return home_layout
 
 @app.callback(
     Output('tabs-content', 'children'),
-    [Input('image-tabs', 'value')]
+    [Input('image-tabs', 'value'),
+     Input('rfi-date-picker', 'date')]
 )
-def render_content(tab):
-    if tab == 'tab-1':
-        img_src = "/assets/sh1_20210101_waterfall.png"
-    elif tab == 'tab-2':
-        img_src = "/assets/sh2_20210101_waterfall.png"
-    elif tab == 'tab-3':
-        img_src = "/assets/DSL_20240207_waterfall.png"
+def update_image_tab_content(tab, selected_date):
+    if not selected_date:
+        return html.Div("Please select a date.")
+
+    selected_date_obj = pd.to_datetime(selected_date)
+    formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
+    
+    # Dynamically update image source paths
+    img_src = f"/assets/plots/sh{tab[-1]}-{formatted_date}.png"
     
     return html.Div(
         html.Img(src=img_src, style={"width": "100%", "height": "auto"}),
         style={"maxWidth": "1200px", "margin": "0 auto"}
     )
+
+@app.callback(
+    [Output('rfi-data-table', 'data'), Output('rfi-data-table', 'columns')],
+    [Input('rfi-date-picker', 'date')]
+)
+def update_data_table(selected_date):
+    if not selected_date:
+        return [], []
+
+    selected_date_obj = pd.to_datetime(selected_date)
+    formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
+    csv_file_path = f'assets/csv/{formatted_date}_rfi_report.csv'
+
+    if os.path.exists(csv_file_path):
+        df = pd.read_csv(csv_file_path)
+        columns = [{"name": i, "id": i} for i in df.columns]
+        data = df.to_dict('records')
+        return data, columns
+    else:
+        return [], []
+
+@app.callback(
+    Output('page-content', 'children'),
+    [Input('url', 'pathname')]
+)
+def display_page(pathname):
+    if pathname == '/rfi_explorer':
+        # Ensure you have defined rfi_explorer.layout in your pages module
+        return rfi_explorer.layout
+    else:
+        return main_page_layout()
 
 if __name__ == '__main__':
     app.run_server(debug=True)
