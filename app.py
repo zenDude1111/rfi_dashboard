@@ -3,6 +3,8 @@ import dash_bootstrap_components as dbc
 from datetime import date
 import pandas as pd
 import os  # Necessary for path operations
+import requests
+from io import StringIO
 
 # Import the layout from the pages module
 from pages import rfi_explorer
@@ -93,8 +95,9 @@ def update_image_tab_content(tab, selected_date):
     selected_date_obj = pd.to_datetime(selected_date)
     formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
     
-    # Dynamically update image source paths
-    img_src = f"/assets/plots/sh{tab[-1]}-{formatted_date}.png"
+    # Assuming 'tab' is a string that ends with a number indicating a specific chart or image
+    # Dynamically update image source paths to point to your Flask application
+    img_src = f"http://universe.phys.unm.edu/data/png/sh{tab[-1]}_{formatted_date}.png"
     
     return html.Div(
         html.Img(src=img_src, style={"width": "100%", "height": "auto"}),
@@ -103,22 +106,33 @@ def update_image_tab_content(tab, selected_date):
 
 @app.callback(
     [Output('rfi-data-table', 'data'), Output('rfi-data-table', 'columns')],
-    [Input('rfi-date-picker', 'date')]
+    [Input('image-tabs', 'value'),  # Assuming this is the correct ID for your tab component
+     Input('rfi-date-picker', 'date')]
 )
-def update_data_table(selected_date):
-    if not selected_date:
+def update_data_table(tab, selected_date):
+    if not selected_date or not tab:
         return [], []
 
     selected_date_obj = pd.to_datetime(selected_date)
     formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
-    csv_file_path = f'assets/csv/{formatted_date}_rfi_report.csv'
+    
+    # Assuming 'tab' is structured in a way that appending its value (or a part of it) directly maps to the correct CSV file
+    csv_url = f'http://universe.phys.unm.edu/data/rfi_reports/sh{tab[-1]}_{formatted_date}_rfi_report.csv'
 
-    if os.path.exists(csv_file_path):
-        df = pd.read_csv(csv_file_path)
-        columns = [{"name": i, "id": i} for i in df.columns]
-        data = df.to_dict('records')
-        return data, columns
-    else:
+    try:
+        response = requests.get(csv_url)
+        if response.status_code == 200:
+            # If the request was successful, parse the CSV data
+            df = pd.read_csv(StringIO(response.text))
+            columns = [{"name": i, "id": i} for i in df.columns]
+            data = df.to_dict('records')
+            return data, columns
+        else:
+            # Handle HTTP errors (e.g., file not found on the server)
+            return [], []
+    except requests.RequestException as e:
+        # Handle other request issues, such as network errors
+        print(f"Error fetching CSV: {e}")
         return [], []
 
 @app.callback(
