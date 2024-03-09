@@ -2,7 +2,7 @@ from dash import Dash, dcc, html, Input, Output, dash_table, callback_context
 import dash_bootstrap_components as dbc
 from datetime import date
 import pandas as pd
-import os  # Necessary for path operations
+import os 
 import requests
 from io import StringIO
 
@@ -95,7 +95,7 @@ def update_image_tab_content(tab, selected_date):
     selected_date_obj = pd.to_datetime(selected_date)
     formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
     
-    # Assuming 'tab' is a string that ends with a number indicating a specific chart or image
+    # 'tab' is structured in a way that appending its value directly maps to the correct png file
     # Dynamically update image source paths to point to your Flask application
     img_src = f"http://universe.phys.unm.edu/data/png/sh{tab[-1]}_{formatted_date}.png"
     
@@ -106,7 +106,7 @@ def update_image_tab_content(tab, selected_date):
 
 @app.callback(
     [Output('rfi-data-table', 'data'), Output('rfi-data-table', 'columns')],
-    [Input('image-tabs', 'value'),  # Assuming this is the correct ID for your tab component
+    [Input('image-tabs', 'value'),
      Input('rfi-date-picker', 'date')]
 )
 def update_data_table(tab, selected_date):
@@ -116,7 +116,7 @@ def update_data_table(tab, selected_date):
     selected_date_obj = pd.to_datetime(selected_date)
     formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
     
-    # Assuming 'tab' is structured in a way that appending its value (or a part of it) directly maps to the correct CSV file
+    # 'tab' is structured in a way that appending its value directly maps to the correct CSV file
     csv_url = f'http://universe.phys.unm.edu/data/rfi_reports/sh{tab[-1]}_{formatted_date}_rfi_report.csv'
 
     try:
@@ -141,7 +141,6 @@ def update_data_table(tab, selected_date):
 )
 def display_page(pathname):
     if pathname == '/rfi_explorer':
-        # Ensure you have defined rfi_explorer.layout in your pages module
         return rfi_explorer.layout
     else:
         return main_page_layout()
