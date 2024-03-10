@@ -50,17 +50,24 @@ def create_plots(data, target_frequency, date):
     ax0 = fig.add_subplot(gs[0, :])  # Boxplot across the top
     sns.boxplot(data=data_dbm, orient="h", ax=ax0)
     ax0.set_title('Horizontal Boxplot (dBm)')
+    ax0.set_xlim([np.min(data_dbm)-5, np.max(data_dbm)+5])  # Extend the x-axis scale for box plot
 
     # PDF with Normal Distribution Overlay
     ax1 = fig.add_subplot(gs[1, :])  # PDF plot below the boxplot
     sns.kdeplot(data_dbm, ax=ax1, label="PDF (dBm)", bw_adjust=0.5)
     mean, std = np.mean(data_dbm), np.std(data_dbm)
     xmin, xmax = ax1.get_xlim()
-    x = np.linspace(xmin, xmax, 100)
+    x = np.linspace(np.min(data_dbm)-5, np.max(data_dbm)+5, 100)  # Extend the x-axis scale for PDF plot
     p = stats.norm.pdf(x, mean, std)
     ax1.plot(x, p, 'k--', linewidth=2, label="Normal Distribution Overlay")
     ax1.set_title('PDF with Normal Distribution Overlay (dBm)')
     ax1.legend()
+    ax1.set_xlim([np.min(data_dbm)-5, np.max(data_dbm)+5])  # Extend the x-axis scale for PDF plot
+
+    # Add quartile lines to PDF plot
+    quartiles = np.percentile(data_dbm, [25, 50, 75])
+    for quartile in quartiles:
+        ax1.axvline(quartile, color='r', linestyle='--', linewidth=1)
 
     # Q-Q Plot
     ax2 = fig.add_subplot(gs[2, 0])  # Q-Q plot in the bottom left
@@ -81,7 +88,7 @@ def create_plots(data, target_frequency, date):
 def main():
     directory_path = "D:\\SouthPole_Signal_Data\\2021"
     data_file = "20210112.csv"
-    target_frequency = '8000.1'  # Assuming frequency is in MHz
+    target_frequency = '449.5'  # Assuming frequency is in MHz
     full_path = os.path.join(directory_path, data_file)
     
     date = data_file.split('.')[0]

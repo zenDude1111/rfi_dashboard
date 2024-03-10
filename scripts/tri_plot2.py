@@ -38,44 +38,47 @@ def compute_statistics(data_dbm):
     return stats_values
 
 def create_plots(data, target_frequency, date):
-    """Create a layout with a horizontal boxplot, PDF plot underneath, then Q-Q plot and statistics underneath that."""
     data_dbm = convert_to_dbm(data)
+    mean = np.mean(data_dbm)
+    std = np.std(data_dbm)
+    q1, median, q3 = np.percentile(data_dbm, [25, 50, 75])
+    iqr = q3 - q1
     
-    fig = plt.figure(figsize=(12, 12))  # Adjust figure size for better fit
-    gs = fig.add_gridspec(3, 2, height_ratios=[1, 2, 1])  # Define grid layout
-
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(12, 12))
     fig.suptitle(f'Analysis for Frequency {target_frequency} MHz on {date}', fontsize=16)
+    
+    medianprops = dict(linestyle='-', linewidth=2, color='yellow')
+    sns.boxplot(x=data_dbm, color='lightcoral', saturation=1, medianprops=medianprops,
+                flierprops={'markerfacecolor': 'mediumseagreen'}, whis=1.5, ax=ax1)
 
-    # Boxplot
-    ax0 = fig.add_subplot(gs[0, :])  # Boxplot across the top
-    sns.boxplot(data=data_dbm, orient="h", ax=ax0)
-    ax0.set_title('Horizontal Boxplot (dBm)')
+    ticks = [mean + std * i for i in range(-4, 5)]
+    ticklabels = [f'${i}\\sigma$' for i in range(-4, 5)]
+    ax1.set_xticks(ticks)
+    ax1.set_xticklabels(ticklabels)
+    ax1.set_yticks([])
+    ax1.tick_params(labelbottom=True)
+    ax1.set_ylim(-1, 1.5)
 
-    # PDF with Normal Distribution Overlay
-    ax1 = fig.add_subplot(gs[1, :])  # PDF plot below the boxplot
-    sns.kdeplot(data_dbm, ax=ax1, label="PDF (dBm)", bw_adjust=0.5)
-    mean, std = np.mean(data_dbm), np.std(data_dbm)
-    xmin, xmax = ax1.get_xlim()
-    x = np.linspace(xmin, xmax, 100)
-    p = stats.norm.pdf(x, mean, std)
-    ax1.plot(x, p, 'k--', linewidth=2, label="Normal Distribution Overlay")
-    ax1.set_title('PDF with Normal Distribution Overlay (dBm)')
-    ax1.legend()
+    # Enhanced annotations
+    ax1.errorbar([q1, q3], [1, 1], yerr=[0.2, 0.2], color='black', lw=1)
+    ax1.text(q1, 0.6, 'Q1', ha='center', va='center', color='black')
+    ax1.text(q3, 0.6, 'Q3', ha='center', va='center', color='black')
+    ax1.text(median, -0.6, 'median', ha='center', va='center', color='black')
+    ax1.text(median, 1.2, 'IQR', ha='center', va='center', color='black')
+    ax1.text(q1 - 1.5*iqr, 0.4, 'Q1 - 1.5*IQR', ha='center', va='center', color='black')
+    ax1.text(q3 + 1.5*iqr, 0.4, 'Q3 + 1.5*IQR', ha='center', va='center', color='black')
 
-    # Q-Q Plot
-    ax2 = fig.add_subplot(gs[2, 0])  # Q-Q plot in the bottom left
-    stats.probplot(data_dbm, dist="norm", plot=ax2)
-    ax2.set_title('Q-Q Plot (dBm)')
+    sns.kdeplot(data_dbm, ax=ax2)
+    kdeline = ax2.lines[0]
+    xs = kdeline.get_xdata()
+    ys = kdeline.get_ydata()
 
-    # Statistics
-    ax3 = fig.add_subplot(gs[2, 1])  # Statistics display in the bottom right
-    ax3.axis('off')  # Hide the axis
-    statistics = compute_statistics(data_dbm)
-    stats_text = '\n'.join([f'{key}: {value:.4f}' for key, value in statistics.items()])
-    ax3.text(0.5, 0.5, stats_text, ha='center', va='center', fontsize=10, transform=ax3.transAxes,
-             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=1'))
+    ylims = ax2.get_ylim()
+    ax2.fill_between(xs, 0, ys, color='mediumseagreen', alpha=0.5)
+    ax2.fill_between(xs, 0, ys, where=(xs >= q1 - 1.5*iqr) & (xs <= q3 + 1.5*iqr), color='skyblue', alpha=0.5)
+    ax2.fill_between(xs, 0, ys, where=(xs >= q1) & (xs <= q3), color='lightcoral', alpha=0.5)
+    ax2.set_ylim(0, ylims[1])
 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
 def main():
@@ -95,10 +98,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
