@@ -25,8 +25,8 @@ def process_file(file_path):
     data['Timestamp'] = calculate_timestamps(start_datetime, len(data))
     data['Timestamp'] = data['Timestamp'].dt.strftime('%H%M%S')  # Format timestamp as hhmmss
     data['Frequency (GHz)'] = data['Frequency (MHz)'] * 0.001
-    data['Power_dBm'] = convert_mw_to_dbm(data['Power_mW'])
-    data.drop(['Frequency (MHz)', 'Power_mW'], axis=1, inplace=True)
+    data['Power_dBm'] = convert_mw_to_dbm(data['Power (mW)'])
+    data.drop(['Frequency (MHz)', 'Power (mW)'], axis=1, inplace=True)
     return data
 
 def consolidate_data(input_directory):
@@ -53,8 +53,8 @@ def create_frequency_files(consolidated_df, output_directory):
 
 def main():
     # Example usage
-    input_directory = r'assets\csv\data\20240101'  # Update this to your input directory path
-    output_directory = r'assets\csv\data\time_series\20240101'  # Update this to your output directory path
+    input_directory = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301'  # Update this to your input directory path
+    output_directory = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301/time_series'  # Update this to your output directory path
     
     consolidated_df = consolidate_data(input_directory)
     create_frequency_files(consolidated_df, output_directory)

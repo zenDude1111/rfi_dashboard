@@ -13,8 +13,8 @@ def process_file(file_path):
         # Remove the 3rd column
         df.drop(df.columns[2], axis=1, inplace=True)
 
-        # Rename the 2nd column to "power_mW"
-        df.rename(columns={df.columns[1]: 'power_mW'}, inplace=True)
+        # Rename the 2nd column to "Power (mW)"
+        df.rename(columns={df.columns[1]: 'Power (mW)'}, inplace=True)
 
         # Save the modified DataFrame back to the file
         df.to_csv(file_path, index=False)
@@ -23,7 +23,7 @@ def process_file(file_path):
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
 
-def process_files(directory, max_workers=50):
+def process_files(directory, max_workers=5):
     # Create a ThreadPoolExecutor to manage concurrency
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Create a dictionary to map future to file_path for error handling
@@ -39,5 +39,5 @@ def process_files(directory, max_workers=50):
                 print(f"{file_path} generated an exception: {exc}")
 
 # Example usage:
-process_files(r'd:\SouthPole_Signal_Data\2023_24')
+process_files('/mnt/4tbssd/southpole_sh_data/sh2_2024/202403')
 

@@ -21,11 +21,11 @@ def process_file(filename, directory, file_pattern, reference_time):
         df = pd.read_csv(os.path.join(directory, filename))
         # Convert MHz to GHz
         frequencies_ghz = df['Frequency (MHz)'] / 1000
-        return frequencies_ghz, np.full(len(df), numerical_time), df['Power(mW)']
+        return frequencies_ghz, np.full(len(df), numerical_time), df['Power (mW)']
 
     return np.array([]), np.array([]), np.array([])
 
-def create_smooth_contour_plot(directory, output_directory, sigma=1, vmin=None, vmax=None):
+def create_smooth_contour_plot(directory, output_directory, sigma=1, vmin=-100, vmax=-20):
     file_pattern = r"(\d{8})_(\d{6})_trace\.csv"
     
     if not os.path.exists(output_directory):
@@ -60,24 +60,20 @@ def create_smooth_contour_plot(directory, output_directory, sigma=1, vmin=None, 
         power_grid_smoothed = gaussian_filter(power_grid, sigma=sigma)
 
         plt.figure(figsize=(12, 6))
-        # Contour plot with time on the y-axis and frequency on the x-axis
-        # Set vmin to -100 and vmax to -20 to adjust the color scale
-        contour = plt.contourf(unique_freqs, unique_times, power_grid_smoothed, levels=50, cmap='viridis', vmin=-100, vmax=-20)
-        plt.colorbar(label='Power (dBm)')
+        # Ensure the contour plot reflects the intended color scale range correctly
+        contour = plt.contourf(unique_freqs, unique_times, power_grid_smoothed, levels=np.linspace(vmin, vmax, 50), cmap='viridis', vmin=vmin, vmax=vmax)
+        cbar = plt.colorbar(label='Power (dBm)', ticks=np.linspace(vmin, vmax, 9))  # Define ticks on the color bar for clarity
 
         plt.xlabel('Frequency (GHz)')
         plt.ylabel('Time (hours since midnight)')
         plt.title(f'SH1 {reference_time.strftime("%Y-%m-%d")}')
         plt.tight_layout(pad=1.08)  # Reduce white border
 
-        output_path = os.path.join(output_directory, f'SH1-{reference_time.strftime("%Y-%m-%d")}.png')
+        output_path = os.path.join(output_directory, f'SH1-{reference_time.strftime("%Y%m%d")}.png')
         plt.savefig(output_path)
         plt.close()  # Close the figure to free memory
 
 # Example usage
-directory_path = r'D:\SouthPole_Signal_Data\signalhound1\20210102'
-output_directory_path = r'assets\plots'
+directory_path = '/mnt/4tbssd/southpole_sh_data/sh1_2024/202403/20240301'
+output_directory_path = 'assets/plots'
 create_smooth_contour_plot(directory_path, output_directory_path)
-
-
-

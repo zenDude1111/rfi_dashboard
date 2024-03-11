@@ -6,7 +6,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 
 # URL of the website
-URL = "http://bicep.rc.fas.harvard.edu/southpole_info/EMI_WG/keckdaq/signalhound2/"
+URL = "http://bicep.rc.fas.harvard.edu/southpole_info/EMI_WG/keckdaq/signalhound1/"
 
 def download_file(url, path):
     response = requests.get(url, stream=True)
@@ -59,6 +59,5 @@ def download_and_unpack_tar(url, save_directory):
 
 
 # Example usage
-save_dir = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403'
+save_dir = '/mnt/4tbssd/southpole_sh_data/sh1_2024/202403'
 download_and_unpack_tar(URL, save_dir)
-
