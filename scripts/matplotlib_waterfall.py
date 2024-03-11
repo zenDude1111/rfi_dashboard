@@ -61,8 +61,10 @@ def create_smooth_contour_plot(directory, output_directory, sigma=1, vmin=None, 
 
         plt.figure(figsize=(12, 6))
         # Contour plot with time on the y-axis and frequency on the x-axis
-        contour = plt.contourf(unique_freqs, unique_times, power_grid_smoothed, levels=50, cmap='viridis', vmin=vmin, vmax=vmax)
+        # Set vmin to -100 and vmax to -20 to adjust the color scale
+        contour = plt.contourf(unique_freqs, unique_times, power_grid_smoothed, levels=50, cmap='viridis', vmin=-100, vmax=-20)
         plt.colorbar(label='Power (dBm)')
+
         plt.xlabel('Frequency (GHz)')
         plt.ylabel('Time (hours since midnight)')
         plt.title(f'SH1 {reference_time.strftime("%Y-%m-%d")}')
