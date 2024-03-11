@@ -86,8 +86,8 @@ def create_plots(data, target_frequency, date):
     plt.show()
 
 def main():
-    directory_path = "D:\\SouthPole_Signal_Data\\2021"
-    data_file = "20210112.csv"
+    directory_path = r"assets\csv\data"
+    data_file = "20240101.csv"
     target_frequency = '449.5'  # Assuming frequency is in MHz
     full_path = os.path.join(directory_path, data_file)
     
