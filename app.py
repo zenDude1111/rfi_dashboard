@@ -7,7 +7,7 @@ import requests
 from io import StringIO
 
 # Import the layout from the pages module
-from pages import rfi_explorer
+from pages import frequency_explorer
 
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
@@ -15,9 +15,9 @@ server = app.server
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Main", href="/")),
-        dbc.NavItem(dbc.NavLink("RFI Explorer", href="/rfi_explorer")),
+        dbc.NavItem(dbc.NavLink("Frequency Explorer", href="/frequency_explorer")),
     ],
-    brand="RFI Dashboard",
+    brand="South Pole RF Environment Dashboard",
     brand_href="/",
     color="secondary",
     dark=True,
@@ -47,7 +47,7 @@ def main_page_layout():
     return html.Div([
         dbc.Row([
             dbc.Col([
-                html.P('Select a date for RFI data:'),
+                html.P('Select a date:'),
                 dcc.DatePickerSingle(
                     id='rfi-date-picker',
                     min_date_allowed=date(1995, 8, 5),
@@ -71,7 +71,7 @@ def main_page_layout():
         ]),
         dbc.Row([
             dbc.Col([
-                html.H3('RFI Report'),
+                html.H3('RF Environment Report'),
                 data_table
             ], width=12),
         ]),
@@ -90,7 +90,7 @@ app.layout = html.Div([
 )
 def update_image_tab_content(tab, selected_date):
     if not selected_date:
-        return html.Div("Please select a date.")
+        return html.Div("Select a date.")
 
     selected_date_obj = pd.to_datetime(selected_date)
     formatted_date = selected_date_obj.strftime('%Y%m%d')  # Format date as YYYYMMDD
@@ -140,8 +140,8 @@ def update_data_table(tab, selected_date):
     [Input('url', 'pathname')]
 )
 def display_page(pathname):
-    if pathname == '/rfi_explorer':
-        return rfi_explorer.layout
+    if pathname == '/frequency_explorer':
+        return frequency_explorer.layout
     else:
         return main_page_layout()
 
