@@ -2,67 +2,63 @@ import pandas as pd
 import numpy as np
 import os
 import glob
-from datetime import datetime, timedelta
 from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor
+from datetime import datetime
 
-def file_start_time(file_name):
-    date_str, time_str = file_name.split('_')[0], file_name.split('_')[1]
-    return datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
-
-def calculate_timestamps(start_datetime, n):
-    interval = timedelta(minutes=2) / n
-    return [start_datetime + i * interval for i in range(n)]
-
-def convert_mw_to_dbm(mw):
-    return 10 * np.log10(mw)
+def convert_power_mw_to_dbm(power_mw):
+    """Convert power from mW to dBm."""
+    return 10 * np.log10(power_mw)
 
 def process_file(file_path):
-    data = pd.read_csv(file_path)
-    base_name = os.path.basename(file_path).replace('_trace.csv', '')
-    start_datetime = file_start_time(base_name)
-    interval = timedelta(minutes=2) / len(data)
-    data['Timestamp'] = calculate_timestamps(start_datetime, len(data))
-    data['Timestamp'] = data['Timestamp'].dt.strftime('%H%M%S')  # Format timestamp as hhmmss
-    data['Frequency (GHz)'] = data['Frequency (MHz)'] * 0.001
-    data['Power_dBm'] = convert_mw_to_dbm(data['Power (mW)'])
-    data.drop(['Frequency (MHz)', 'Power (mW)'], axis=1, inplace=True)
-    return data
+    """Process an individual file to read, convert, and structure its data."""
+    try:
+        # Extract timestamp from the file name
+        file_name = os.path.basename(file_path)
+        timestamp = datetime.strptime(file_name.split('_')[1], '%H%M%S').strftime('%H:%M:%S')
+        # Read CSV file
+        df = pd.read_csv(file_path, names=['Frequency (MHz)', 'Power (mW)'], skiprows=1)
+        # Convert frequency to GHz and power to dBm
+        df['Frequency (GHz)'] = df['Frequency (MHz)'] / 1000
+        df['Power (dBm)'] = convert_power_mw_to_dbm(df['Power (mW)'])
+        # Assign timestamp to each row
+        df['Timestamp'] = timestamp
+        # Keep only necessary columns for the pivot operation
+        return df[['Frequency (GHz)', 'Timestamp', 'Power (dBm)']]
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
+        return pd.DataFrame()
 
-def consolidate_data(input_directory):
-    file_pattern = os.path.join(input_directory, "*_trace.csv")
-    files = glob.glob(file_pattern)
-    consolidated_data = []
-    
-    with ProcessPoolExecutor() as executor:
-        results = list(tqdm(executor.map(process_file, files), total=len(files), desc="Reading files"))
-    
-    consolidated_df = pd.concat(results, ignore_index=True)
-    return consolidated_df
+def reshape_data(all_data):
+    """Concatenate and pivot the dataframes to the desired structure."""
+    if all_data:
+        combined_df = pd.concat(all_data, ignore_index=True)
+        pivot_df = combined_df.pivot_table(index='Frequency (GHz)', columns='Timestamp', values='Power (dBm)', aggfunc='mean').reset_index()
+        pivot_df.columns.name = None  # Remove the aggregation function name from the column
+        return pivot_df
+    else:
+        return pd.DataFrame()
 
-def create_frequency_files(consolidated_df, output_directory):
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-    
-    frequencies = consolidated_df['Frequency (GHz)'].unique()
-    for frequency in tqdm(frequencies, desc="Processing frequencies"):
-        group = consolidated_df[consolidated_df['Frequency (GHz)'] == frequency]
-        output_file_name = f"{frequency:.3f}_GHz.csv"  # Changed file naming to match requirement
-        output_file_path = os.path.join(output_directory, output_file_name)
-        group[['Timestamp', 'Power_dBm']].to_csv(output_file_path, index=False)  # Ensure correct column order
+def process_directory(directory_path):
+    """Process all CSV files within the specified directory."""
+    all_data = []
+    file_paths = glob.glob(os.path.join(directory_path, '**/*_trace.csv'), recursive=True)
 
-def main():
-    # Example usage
-    input_directory = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301'  # Update this to your input directory path
-    output_directory = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301/time_series'  # Update this to your output directory path
-    
-    consolidated_df = consolidate_data(input_directory)
-    create_frequency_files(consolidated_df, output_directory)
+    for file_path in tqdm(file_paths, desc="Processing Files"):
+        df = process_file(file_path)
+        if not df.empty:
+            all_data.append(df)
 
-if __name__ == '__main__':
-    main()
+    final_df = reshape_data(all_data)
 
+    if not final_df.empty:
+        # Output file path
+        output_file = os.path.join(directory_path, '20240101_matrix.csv')
+        # Write to a new CSV file
+        final_df.to_csv(output_file, index=False)
+        print(f"Data combined and written to {output_file}")
+    else:
+        print("No data processed.")
 
-
-
-
+# Example usage
+directory_path = r'd:\SouthPole_Signal_Data\2023_24\20240101'
+process_directory(directory_path)
