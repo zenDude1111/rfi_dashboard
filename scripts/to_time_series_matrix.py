@@ -54,7 +54,7 @@ def process_file(file_path):
         # Read CSV file
         df = pd.read_csv(file_path, names=['Frequency (MHz)', 'Power (mW)'], skiprows=1)
         # Convert frequency to GHz and power to dBm
-        df['Frequency (GHz)'] = df['Frequency (MHz)'] / 1000
+        df['Frequency (GHz)'] = (df['Frequency (MHz)'] / 1000).round(4)
         df['Power (dBm)'] = convert_power_mw_to_dbm(df['Power (mW)'])
         # Assign timestamp to each row
         df['Timestamp'] = timestamp
@@ -91,8 +91,8 @@ def process_directory(directory_path):
         summary_df = calculate_metrics(final_df)
 
         # Write the final data and summary to CSV files
-        output_file = os.path.join(directory_path, '20240101_matrix.csv')
-        summary_file = os.path.join(directory_path, '20240101_rfe_summary.csv')
+        output_file = os.path.join(directory_path, '20240301_matrix.csv')
+        summary_file = os.path.join(directory_path, '20240301_rfe_summary.csv')
 
         final_df.to_csv(output_file, index=False)
         summary_df.to_csv(summary_file, index=False)
@@ -103,5 +103,5 @@ def process_directory(directory_path):
         print("No data processed.")
 
 # Example usage
-directory_path = r'd:\SouthPole_Signal_Data\2023_24\20240102'
+directory_path = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301'
 process_directory(directory_path)
