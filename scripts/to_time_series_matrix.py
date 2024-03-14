@@ -91,8 +91,8 @@ def process_directory(directory_path):
         summary_df = calculate_metrics(final_df)
 
         # Write the final data and summary to CSV files
-        output_file = os.path.join(directory_path, '20240301_matrix.csv')
-        summary_file = os.path.join(directory_path, '20240301_rfe_summary.csv')
+        output_file = os.path.join(directory_path, '20240302_matrix.csv')
+        summary_file = os.path.join(directory_path, '20240302_rfe_summary.csv')
 
         final_df.to_csv(output_file, index=False)
         summary_df.to_csv(summary_file, index=False)
@@ -103,5 +103,5 @@ def process_directory(directory_path):
         print("No data processed.")
 
 # Example usage
-directory_path = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301'
+directory_path = '/mnt/4tbssd/southpole_sh_data/sh1_2024/202403/20240302'
 process_directory(directory_path)

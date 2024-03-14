@@ -6,7 +6,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 
 # URL of the website
-URL = "http://bicep.rc.fas.harvard.edu/southpole_info/EMI_WG/keckdaq/signalhound2/"
+URL = "http://bicep.rc.fas.harvard.edu/southpole_info/EMI_WG/keckdaq/signalhound1/"
 
 def download_file(url, path):
     response = requests.get(url, stream=True)
@@ -33,32 +33,35 @@ def download_and_process(url, link, save_directory):
     download_file(url + link, tar_path)
     unpack_and_delete_tar(tar_path, save_directory)
 
-def download_and_unpack_tar(url, save_directory):
+def download_and_unpack_tar(url, save_directory, start_date_str):
     if not os.path.exists(save_directory):
         os.makedirs(save_directory)
 
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     tar_links = [a['href'] for a in soup.find_all('a') if a['href'].endswith('.tar.gz')]
+    
+    # Convert the start_date_str to a datetime object
+    start_date = datetime.strptime(start_date_str, '%Y%m%d')
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         for link in tar_links:
-            # Directly extract the date part from the filename
             try:
+                # Extract the date part from the filename
                 file_date = datetime.strptime(link[:8], '%Y%m%d')
-                # Adjust the condition to check both year and month
-                if file_date.year == 2024 and file_date.month == 3:  # Example for March 2024
+                # Check if the file_date is after the specified start_date
+                if file_date > start_date:
                     futures.append(executor.submit(download_and_process, url, link, save_directory))
             except ValueError:
-                # Log error or handle it as necessary
+                # Handle the error or log it as necessary
                 continue
 
         for future in concurrent.futures.as_completed(futures):
             future.result()
 
-
 # Example usage
-save_dir = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403'
-download_and_unpack_tar(URL, save_dir)
+save_dir = '/mnt/4tbssd/southpole_sh_data/sh1_2024/202403'
+start_date_str = '20240309'  # Example start date in YYYYMMDD format
+download_and_unpack_tar(URL, save_dir, start_date_str)
 
