@@ -66,14 +66,14 @@ def create_smooth_contour_plot(directory, output_directory, sigma=1, vmin=-100, 
 
         plt.xlabel('Frequency (GHz)')
         plt.ylabel('Time (hours since midnight)')
-        plt.title(f'SH1 {reference_time.strftime("%Y-%m-%d")}')
+        plt.title(f'SH2 {reference_time.strftime("%Y-%m-%d")}')
         plt.tight_layout(pad=1.08)  # Reduce white border
 
-        output_path = os.path.join(output_directory, f'SH1-{reference_time.strftime("%Y%m%d")}.png')
+        output_path = os.path.join(output_directory, f'SH2-{reference_time.strftime("%Y%m%d")}.png')
         plt.savefig(output_path)
         plt.close()  # Close the figure to free memory
 
 # Example usage
-directory_path = '/mnt/4tbssd/southpole_sh_data/sh1_2024/202403/20240301'
-output_directory_path = 'assets/plots'
+directory_path = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301'
+output_directory_path = '/mnt/4tbssd/plots'
 create_smooth_contour_plot(directory_path, output_directory_path)

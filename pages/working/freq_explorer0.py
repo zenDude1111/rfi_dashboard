@@ -1,46 +1,36 @@
-from dash import html, dcc, Dash, callback, State
-from dash.dependencies import Input, Output
+from dash import html, dcc, Dash, callback, Input, Output
 import plotly.graph_objs as go
 import pandas as pd
 import numpy as np
 from scipy.stats import kurtosis, skew
 from datetime import datetime
 import plotly.figure_factory as ff
-import requests
-from io import StringIO
+import os
 
-layout = html.Div([
-    html.H1("Frequency Explorer", style={"textAlign": "center"}),
-    html.Div([
-        dcc.Input(
-            id="signal-hound-input",
-            type="number",
-            placeholder="Signal Hound Number",
-            style={"marginRight": "10px"}
-        ),
-        dcc.DatePickerSingle(
-            id='date-picker-single',
-            min_date_allowed=datetime(1995, 1, 1),
-            max_date_allowed=datetime.now(),
-            initial_visible_month=datetime.now(),
-            date=datetime.now().date(),
-            style={"marginRight": "10px"}
-        ),
-        dcc.Input(
-            id="frequency-input",
-            type="number",
-            placeholder="Frequency in GHz",
-            step=0.0001,
-            style={"marginRight": "10px"}
-        ),
-        html.Button("Submit", id="submit-button", n_clicks=0, style={"marginLeft": "10px"}),
-    ], style={"textAlign": "center", "marginTop": "20px"}),
-    html.Div(id="statistics-output", style={"textAlign": "center", "marginBottom": "20px", "display": "flex", "flexWrap": "wrap", "justifyContent": "center"}),
-    dcc.Graph(id="time-series-graph"),
-    dcc.Graph(id="box-plot"),
-    dcc.Graph(id="pdf-plot"),
-    dcc.Graph(id="qq-plot"),
-])
+DATA_FOLDER = '/mnt/4tbssd/southpole_sh_data/sh2_2024/202403/20240301'  # Update this path to where your data is stored
+
+def load_and_process_data(date_str, target_frequency_ghz):
+    date_formatted = date_str.replace('-', '')
+    file_path = os.path.join(DATA_FOLDER, f"{date_formatted}_matrix.csv")
+    
+    try:
+        df = pd.read_csv(file_path, index_col=0)
+        df.index = df.index.astype(float)  # Ensure index is float for frequency comparison
+        target_frequency_ghz = float(target_frequency_ghz)  # Ensure input frequency is float
+        
+        if target_frequency_ghz not in df.index:
+            print(f"Frequency {target_frequency_ghz} GHz not found in the DataFrame.")
+            return pd.DataFrame()
+
+        power_values_row = df.loc[target_frequency_ghz]
+        power_values_df = power_values_row.to_frame(name='Power (dBm)').reset_index()
+        power_values_df.rename(columns={'index': 'Timestamp'}, inplace=True)
+        power_values_df['Timestamp'] = pd.to_datetime(power_values_df['Timestamp'], format='%H:%M:%S').dt.time
+
+        return power_values_df
+    except Exception as e:
+        print(f"Error loading or processing {file_path}: {e}")
+        return pd.DataFrame()
 
 def generate_card_content(stat, value):
     """Generate HTML content for a statistic card."""
@@ -59,21 +49,31 @@ def generate_card_content(stat, value):
         "backgroundColor": "#F9F9F9"
     })
 
-def fetch_data_from_server(signal_hound_number, date_str, target_frequency_ghz):
-    url = f"http://universe.phys.unm.edu/data/time_series_matrix_data/sh{signal_hound_number}/{date_str}/{target_frequency_ghz}"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            # Wrap the JSON string in a StringIO object
-            json_str_io = StringIO(response.text)
-            data_df = pd.read_json(json_str_io, orient='records')
-            return data_df
-        else:
-            print(f"Error fetching data: Status code {response.status_code}")
-            return pd.DataFrame()
-    except Exception as e:
-        print(f"Exception while fetching data: {e}")
-        return pd.DataFrame()
+layout = html.Div([
+    html.H1("Frequency Explorer", style={"textAlign": "center"}),
+    html.Div([
+        dcc.DatePickerSingle(
+            id='date-picker-single',
+            min_date_allowed=datetime(1995, 1, 1),
+            max_date_allowed=datetime.now(),
+            initial_visible_month=datetime.now(),
+            date=datetime.now().date()
+        ),
+        dcc.Input(
+            id="frequency-input",
+            type="number",
+            placeholder="Frequency in GHz",
+            step=0.0001,
+            style={"marginLeft": "10px"}
+        ),
+        html.Button("Submit", id="submit-button", n_clicks=0, style={"marginLeft": "10px"}),
+    ], style={"textAlign": "center"}),
+    html.Div(id="statistics-output", style={"textAlign": "center", "marginBottom": "20px", "display": "flex", "flexWrap": "wrap", "justifyContent": "center"}),  # Prepared for cards
+    dcc.Graph(id="time-series-graph"),
+    dcc.Graph(id="box-plot"),
+    dcc.Graph(id="pdf-plot"),
+    dcc.Graph(id="qq-plot"),
+])
 
 @callback(
     [Output('time-series-graph', 'figure'),
@@ -82,18 +82,16 @@ def fetch_data_from_server(signal_hound_number, date_str, target_frequency_ghz):
      Output('qq-plot', 'figure'),
      Output('statistics-output', 'children')],
     [Input('submit-button', 'n_clicks')],
-    [State('signal-hound-input', 'value'),
-     State('date-picker-single', 'date'),
-     State('frequency-input', 'value')]
+    [Input('date-picker-single', 'date'),
+     Input('frequency-input', 'value')]
 )
-def update_graphs_and_stats(n_clicks, signal_hound_number, date_str, frequency):
-    if n_clicks < 1 or frequency is None or signal_hound_number is None:
-        return [{}, {}, {}, {}, "Enter all fields and click submit."]
-
-    formatted_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y%m%d")
-    df = fetch_data_from_server(signal_hound_number, formatted_date_str, frequency)
+def update_graphs_and_stats(n_clicks, date_str, frequency):
+    if n_clicks < 1 or frequency is None:
+        return [{}, {}, {}, {}, []]  # Updated to return an empty list for stats
+    
+    df = load_and_process_data(date_str, frequency)
     if df.empty:
-        return [{}, {}, {}, {}, "No data available for the selected parameters."]
+        return [{}, {}, {}, {}, "No data available for the selected date and frequency."]
     
     # Time Series Graph
     time_series_fig = go.Figure(
@@ -149,6 +147,5 @@ def update_graphs_and_stats(n_clicks, signal_hound_number, date_str, frequency):
         [generate_card_content(stat, value) for stat, value in stats_all.items()],
         style={"textAlign": "center", "display": "flex", "flexWrap": "wrap", "justifyContent": "center"}
     )
-
-    # Return the updated figures and stats content
+    
     return time_series_fig, box_plot_fig, pdf_plot_fig, qq_plot_fig, stats_output
