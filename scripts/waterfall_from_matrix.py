@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Define the paths
-input_csv_path = '/mnt/4tbssd/time_series_matrix_data/sh1/2021/20210101_matrix.csv'  # Update this path
-output_plot_path = '/mnt/4tbssd/plots/jet4_sh1_20210101.png'  # Update this path
+input_csv_path = '/mnt/4tbssd/time_series_matrix_data/sh1/2021/20210101_matrix.csv'
+output_plot_path = '/mnt/4tbssd/plots/brg_contour25_sh1_20210101.png'
 
 # Read the CSV file
 data = pd.read_csv(input_csv_path, index_col='Frequency (GHz)')
@@ -19,22 +19,25 @@ time_stamps = [hours_since_midnight(ts) for ts in data.columns]
 # Create meshgrid for frequencies and times
 F, T = np.meshgrid(data.index, time_stamps)
 
-# Transpose the data to align with the meshgrid, skipping the frequency column
-power_readings = data.values.T  # Transpose to align with F and T dimensions
+# Transpose the data to align with the meshgrid
+power_readings = data.values.T
 
-# Create the plot
+# Determine the range of your data for contour levels
+#min_power = np.min(power_readings)
+#max_power = np.max(power_readings)
+levels = np.linspace(-110,-20, 25)  # Adjust number of levels as needed
+
+# Create the contour plot
 plt.figure(figsize=(10, 6))
-c = plt.pcolormesh(F, T, power_readings, shading='auto', cmap='jet', vmin=-100, vmax=-60)
+c = plt.contourf(F, T, power_readings, levels=levels, cmap='brg')
 
 # Labeling
 plt.xlabel('Frequency (GHz)')
 plt.ylabel('Time since midnight (hours)')
-plt.title('Waterfall Plot of Power Readings')
+plt.title('20210101 SH1')
 plt.colorbar(c, label='Power (dBm)')
 
-# Save the plot to a file
+# Save and optionally display the plot
 plt.tight_layout()
 plt.savefig(output_plot_path)
-
-# Optionally display the plot as well
 # plt.show()
