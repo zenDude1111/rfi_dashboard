@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 
 # Modularized layout imports
 from pages import frequency_explorer
-from pages import known_frequencies
+#from pages import known_frequencies2
 
 # Create Dash application instance with external stylesheets for theming
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.DARKLY])
@@ -20,7 +20,7 @@ def create_navbar():
         children=[
             dbc.NavItem(dbc.NavLink("Main", href="/")),
             dbc.NavItem(dbc.NavLink("Frequency Explorer", href="/frequency_explorer")),
-            dbc.NavItem(dbc.NavLink("Known Frequencies", href="/known_frequencies")),
+            #dbc.NavItem(dbc.NavLink("Known Frequencies", href="/known_frequencies")),
         ],
         brand="South Pole RF Environment Dashboard",
         brand_href="/",
@@ -32,7 +32,7 @@ def create_data_table():
     """Initializes and returns an empty DataTable component."""
     initial_df = pd.DataFrame()
     return dash_table.DataTable(
-        id='rfi-data-table',
+        id='main-rfi-data-table',
         columns=[{"name": i, "id": i} for i in initial_df.columns],
         data=initial_df.to_dict('records'),
         style_cell={'textAlign': 'left', 'padding': '5px'},
@@ -82,14 +82,14 @@ def layout_main_page():
 
 
 app.layout = html.Div([
-    dcc.Location(id='url', refresh=False),
+    dcc.Location(id='main-url', refresh=False),
     create_navbar(),
-    html.Div(id='page-content'),
+    html.Div(id='main-page-content'),
 ])
 
 @app.callback(
-    Output('tabs-content', 'children'),
-    [Input('image-tabs', 'value'), Input('rfi-date-picker', 'date')]
+    Output('main-tabs-content', 'children'),
+    [Input('main-image-tabs', 'value'), Input('main-rfi-date-picker', 'date')]
 )
 def update_image_tab_content(tab, selected_date):
     if not selected_date:
@@ -108,8 +108,8 @@ def update_image_tab_content(tab, selected_date):
     )
 
 @app.callback(
-    [Output('main-rfi-data-table', 'data'), Output('rfi-data-table', 'columns')],
-    [Input('main-image-tabs', 'value'), Input('rfi-date-picker', 'date')]
+    [Output('main-rfi-data-table', 'data'), Output('main-rfi-data-table', 'columns')],
+    [Input('main-image-tabs', 'value'), Input('main-rfi-date-picker', 'date')]
 )
 def update_data_table(tab, selected_date):
 
@@ -142,14 +142,14 @@ def update_data_table(tab, selected_date):
         return [], []
 
 @app.callback(
-    Output('page-content', 'children'),
-    [Input('url', 'pathname')]
+    Output('main-page-content', 'children'),
+    [Input('main-url', 'pathname')]
 )
 def display_page(pathname):
     if pathname == '/frequency_explorer':
         return frequency_explorer.layout
-    elif pathname == '/known_frequencies':
-        return known_frequencies.layout
+    #elif pathname == '/known_frequencies':
+        #return known_frequencies2.layout
     return layout_main_page()
 
 if __name__ == '__main__':
