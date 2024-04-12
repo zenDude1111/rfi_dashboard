@@ -1,0 +1,26 @@
+"""
+The Kolmogorov-Smirnov (K-S) Test for Normality:
+
+The K-S test is a non-parametric test that compares the cumulative distribution function (CDF) of the observed data 
+with the CDF of a specified theoretical distribution (in this case, the normal distribution). The test calculates the 
+D statistic, which is the maximum difference between the two CDFs across all possible values. 
+
+The process involves:
+1. Calculating the empirical CDF of the observed data.
+2. Calculating the CDF of a normal distribution with the same mean and standard deviation as the observed data.
+3. Finding the maximum absolute difference (D statistic) between these two CDFs.
+4. Computing a p-value based on the D statistic, which indicates the probability of observing such a difference 
+   if the observed data actually followed the specified normal distribution.
+
+A low p-value (typically < 0.05) suggests that the observed data significantly deviate from the normal distribution, 
+indicating that the distribution of the data is not normal. Conversely, a high p-value suggests that the data could 
+plausibly have come from a normal distribution, although it does not confirm normality outright.
+
+This test is applied to each frequency's power readings in the dataset to assess the normality of their distribution. 
+It provides a systematic method to identify deviations from normality, which can be critical for analyses assuming 
+normal distribution of the data.
+
+Note: While the K-S test is useful for assessing normality, it's important to consider its limitations. 
+The test is more sensitive to differences near the center of the distribution than at the tails. 
+Additionally, the test's efficacy might be reduced for very small or very large samples.
+"""
