@@ -1,5 +1,6 @@
-from dash import html, dcc, Dash, callback, State
+from dash import html, dcc, callback, State
 from dash.dependencies import Input, Output
+import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 import pandas as pd
 import numpy as np
@@ -9,55 +10,57 @@ import plotly.figure_factory as ff
 import requests
 from io import StringIO
 
+def generate_card_content(stat, value):
+    """Generate HTML content for a statistic card with Bootstrap classes."""
+    return dbc.Card(
+        dbc.CardBody([
+            html.H6(stat, className="card-title"),
+            html.P(f"{value:.2f}", className="card-text"),
+        ]),
+        className="m-2 text-center",
+        style={"width": "140px", "backgroundColor": "#F9F9F9"}
+    )
+
 layout = html.Div([
-    html.H1("Frequency Explorer", style={"textAlign": "center"}),
-    html.Div([
-        dcc.Input(
-            id="signal-hound-input",
-            type="number",
-            placeholder="Signal Hound Number",
-            style={"marginRight": "10px"}
-        ),
-        dcc.DatePickerSingle(
-            id='date-picker-single',
-            min_date_allowed=datetime(1995, 1, 1),
-            max_date_allowed=datetime.now(),
-            initial_visible_month=datetime.now(),
-            date=datetime.now().date(),
-            style={"marginRight": "10px"}
-        ),
-        dcc.Input(
-            id="frequency-input",
-            type="number",
-            placeholder="Frequency in GHz",
-            step=0.0001,
-            style={"marginRight": "10px"}
-        ),
-        html.Button("Submit", id="submit-button", n_clicks=0, style={"marginLeft": "10px"}),
-    ], style={"textAlign": "center", "marginTop": "20px"}),
-    html.Div(id="statistics-output", style={"textAlign": "center", "marginBottom": "20px", "display": "flex", "flexWrap": "wrap", "justifyContent": "center"}),
+    html.H4("Frequency Explorer", className="text-center mb-4"),
+    dbc.Row(
+        dbc.Col([
+            html.Div([  # Flex container for inline elements
+                dcc.RadioItems(
+                    id='fe-signal-hound-input',
+                    options=[
+                        {'label': 'SH1-MAPO', 'value': '1'},
+                        {'label': 'SH2-DSL', 'value': '2'}
+                    ],
+                    inline=False,
+                    className="me-2",  # margin right to space elements
+                ),
+                dcc.DatePickerSingle(
+                    id='fe-date-picker-single',
+                    min_date_allowed=datetime(1995, 1, 1),
+                    max_date_allowed=datetime.now(),
+                    initial_visible_month=datetime.now(),
+                    date=datetime.now().date(),
+                    className="me-2"
+                ),
+                dcc.Input(
+                    id="fe-frequency-input",
+                    type="number",
+                    placeholder="Frequency in GHz",
+                    step=0.0001,
+                    className="me-2"
+                ),
+                html.Button("Submit", id="fe-submit-button", n_clicks=0, className="btn btn-secondary"),
+            ], className="d-flex justify-content-center align-items-center"),  # This ensures inline layout
+        ], width=12),
+        className="justify-content-center"
+    ),
+    html.Div(id="statistics-output", className="text-center mb-4 d-flex flex-wrap justify-content-center"),
     dcc.Graph(id="time-series-graph"),
     dcc.Graph(id="box-plot"),
     dcc.Graph(id="pdf-plot"),
     dcc.Graph(id="qq-plot"),
-])
-
-def generate_card_content(stat, value):
-    """Generate HTML content for a statistic card."""
-    return html.Div([
-        html.Div(stat, style={"fontSize": 16, "color": "#4CAF50"}),  # Stat name
-        html.Div(f"{value:.2f}", style={"fontSize": 20, "fontWeight": "bold"})  # Stat value
-    ], style={
-        "margin": "10px",
-        "padding": "20px",
-        "border": "1px solid #ddd",
-        "borderRadius": "5px",
-        "boxShadow": "2px 2px 10px rgba(0,0,0,0.1)",
-        "display": "inline-block",
-        "width": "140px",
-        "textAlign": "center",
-        "backgroundColor": "#F9F9F9"
-    })
+], className="text-center")
 
 def fetch_data_from_server(signal_hound_number, date_str, target_frequency_ghz):
     url = f"http://universe.phys.unm.edu/data/time_series_matrix_data/sh{signal_hound_number}/{date_str}/{target_frequency_ghz}"
@@ -81,10 +84,10 @@ def fetch_data_from_server(signal_hound_number, date_str, target_frequency_ghz):
      Output('pdf-plot', 'figure'),
      Output('qq-plot', 'figure'),
      Output('statistics-output', 'children')],
-    [Input('submit-button', 'n_clicks')],
-    [State('signal-hound-input', 'value'),
-     State('date-picker-single', 'date'),
-     State('frequency-input', 'value')]
+    [Input('fe-submit-button', 'n_clicks')],
+    [State('fe-signal-hound-input', 'value'),
+     State('fe-date-picker-single', 'date'),
+     State('fe-frequency-input', 'value'),]
 )
 def update_graphs_and_stats(n_clicks, signal_hound_number, date_str, frequency):
     if n_clicks < 1 or frequency is None or signal_hound_number is None:
@@ -95,9 +98,9 @@ def update_graphs_and_stats(n_clicks, signal_hound_number, date_str, frequency):
     if df.empty:
         return [{}, {}, {}, {}, "No data available for the selected parameters."]
     
-    # Time Series Graph
+    # Time Series Graph using WebGL
     time_series_fig = go.Figure(
-        data=[go.Scatter(x=df['Timestamp'], y=df['Power (dBm)'], mode='lines+markers', name='Power')]
+        data=[go.Scattergl(x=df['Timestamp'], y=df['Power (dBm)'], mode='lines+markers', name='Power')]
     )
     time_series_fig.update_layout(
         title="Time Series of Power",
@@ -128,7 +131,7 @@ def update_graphs_and_stats(n_clicks, signal_hound_number, date_str, frequency):
     qq_data = np.sort(df['Power (dBm)'].values)
     theoretical_quantiles = np.sort(np.random.normal(np.mean(qq_data), np.std(qq_data), len(qq_data)))
     qq_plot_fig = go.Figure(
-        data=[go.Scatter(x=theoretical_quantiles, y=qq_data, mode='markers', name='Quantiles')]
+        data=[go.Scattergl(x=theoretical_quantiles, y=qq_data, mode='markers', name='Quantiles')]
     )
     qq_plot_fig.update_layout(
         title="Q-Q Plot of Power Distribution",
