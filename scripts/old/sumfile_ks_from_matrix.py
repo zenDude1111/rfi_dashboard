@@ -34,10 +34,10 @@ def process_chunk(chunk):
     # Optimized to call calculate_ks_test once per chunk
     ks_p_values, ks_d_statistics = calculate_ks_test(numeric_chunk)
     stats = {
-        'Mean': numeric_chunk.mean(axis=1).round(4),
-        'Median': numeric_chunk.median(axis=1).round(4),
-        'Min': numeric_chunk.min(axis=1).round(4),
-        'Max': numeric_chunk.max(axis=1).round(4),
+        'Mean (dBm)': numeric_chunk.mean(axis=1).round(4),
+        'Median (dBm)': numeric_chunk.median(axis=1).round(4),
+        'Min (dBm)': numeric_chunk.min(axis=1).round(4),
+        'Max (dBm)': numeric_chunk.max(axis=1).round(4),
         'Skew': skew(numeric_chunk, axis=1).round(4),
         'Kurtosis': kurtosis(numeric_chunk, axis=1).round(4),
         '% Above 1.5*IQR': calculate_percent_above_1_5_iqr(numeric_chunk),
@@ -64,41 +64,14 @@ def parallel_process(df, chunk_size):
 df = pd.read_csv(input_file_path)
 
 # Determine an appropriate chunk size
-chunk_size = 1000  # Adjust based on your system's memory and number of cores
+chunk_size = 5000  # Adjust based on your system's memory and number of cores
 
 # Parallel process
 summary_df = parallel_process(df, chunk_size)
 
+# Sort summary_df by 'Frequency (GHz)' in ascending order
+summary_df.sort_values(by='Frequency (GHz)', inplace=True)
+
 # Write the summary to a CSV file
 summary_df.to_csv(output_summary_path, index=False)
 print(f'Summary statistics written to {output_summary_path}')
-
-
-
-"""
-The Kolmogorov-Smirnov (K-S) Test for Normality:
-
-The K-S test is a non-parametric test that compares the cumulative distribution function (CDF) of the observed data 
-with the CDF of a specified theoretical distribution (in this case, the normal distribution). The test calculates the 
-D statistic, which is the maximum difference between the two CDFs across all possible values. 
-
-The process involves:
-1. Calculating the empirical CDF of the observed data.
-2. Calculating the CDF of a normal distribution with the same mean and standard deviation as the observed data.
-3. Finding the maximum absolute difference (D statistic) between these two CDFs.
-4. Computing a p-value based on the D statistic, which indicates the probability of observing such a difference 
-   if the observed data actually followed the specified normal distribution.
-
-A low p-value (typically < 0.05) suggests that the observed data significantly deviate from the normal distribution, 
-indicating that the distribution of the data is not normal. Conversely, a high p-value suggests that the data could 
-plausibly have come from a normal distribution, although it does not confirm normality outright.
-
-This test is applied to each frequency's power readings in the dataset to assess the normality of their distribution. 
-It provides a systematic method to identify deviations from normality, which can be critical for analyses assuming 
-normal distribution of the data.
-
-Note: While the K-S test is useful for assessing normality, it's important to consider its limitations. 
-The test is more sensitive to differences near the center of the distribution than at the tails. 
-Additionally, the test's efficacy might be reduced for very small or very large samples.
-"""
-
