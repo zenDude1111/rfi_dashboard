@@ -18,8 +18,8 @@ layout = html.Div(children=[
                         id="radios-contour",
                         className="btn-group",
                         inputClassName="btn-check",
-                        labelClassName="btn btn-outline-secondary",  # Changed to secondary
-                        labelCheckedClassName="btn btn-secondary",    # Changed to secondary
+                        labelClassName="btn btn-outline-secondary",  
+                        labelCheckedClassName="btn btn-secondary",    
                         options=[
                             {"label": "SH1-Mapo", "value": 'sh1'},
                             {"label": "SH2-DSL", "value": 'sh2'},

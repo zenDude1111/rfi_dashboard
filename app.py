@@ -5,7 +5,7 @@ from dash import Dash, dcc, html, Input, Output, callback_context
 import dash_bootstrap_components as dbc
 
 # Modularized layout imports
-from pages import freq_explorer, daily_metrics, contour_all
+from pages import freq_explorer, daily_metrics, contour_all#, freq_correlations
 
 # Create Dash application instance with external stylesheets for theming
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.DARKLY])
@@ -19,6 +19,7 @@ def create_navbar():
             #dbc.NavItem(dbc.NavLink("Frequency Explorer", href="/freq_explorer")),
             dbc.NavItem(dbc.NavLink("Countours", href="/contour_all")),
             dbc.NavItem(dbc.NavLink("Daily Metrics", href="/daily_metrics")),
+            #dbc.NavItem(dbc.NavLink("Frequency Correlations", href="/freq_correlations")),
         ],
         brand="South Pole RFI Dashboard",
         brand_href="/",
@@ -116,6 +117,8 @@ def display_page(pathname):
         return daily_metrics.layout
     elif pathname == '/contour_all':
         return contour_all.layout
+    #elif pathname == '/freq_correlations':
+        #return freq_correlations.layout
     return contour_all.layout
     #return layout_main_page()
 
