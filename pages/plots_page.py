@@ -19,18 +19,19 @@ layout = html.Div(children=[
                         className="btn-group",
                         inputClassName="btn-check",
                         labelClassName="btn btn-outline-secondary",  
-                        labelCheckedClassName="btn btn-secondary",    
+                        labelCheckedClassName="btn btn-secondary",
                         options=[
                             {"label": "SH1-Mapo", "value": 'sh1'},
                             {"label": "SH2-DSL", "value": 'sh2'},
                             {"label": "Anritsu-DSL", "value": 'anritsu'},
                         ],
+                        value='anritsu'  # Set Anritsu as the default selected value
                     ),
                 ], style={'flex': '1', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'flex-start'}),
 
                 # "Contour Plot" title in the middle
                 html.Div([
-                    html.H5("Contour Plots", className="card-title"),
+                    html.H5("", className="card-title"),
                 ], style={'flex': '1', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'}),
 
                 # Forward/back buttons and date picker on the right
@@ -44,7 +45,7 @@ layout = html.Div(children=[
                 ], style={'flex': '1', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'flex-end', 'gap': '10px'}),
             ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'gap': '10px'})
         ),
-        style={'margin': '20px'}
+        style={'margin': '5px'}
     ),
 
     dbc.Card(
@@ -54,7 +55,17 @@ layout = html.Div(children=[
                 style={'height': '800px', 'width': '100%'}
             )
         ),
-        style={'margin': '20px'}
+        style={'margin': '5px'}
+    ),
+
+    dbc.Card(
+        dbc.CardBody(
+            dcc.Graph(
+                id='stats-graph-plot',
+                style={'height': '400px', 'width': '100%'}
+            )
+        ),
+        style={'margin': '5px'}
     )
 ])
 
@@ -80,33 +91,34 @@ def update_date(backward_clicks, forward_clicks, current_date):
 
     return new_date.strftime('%Y-%m-%d')
 
+def get_data(device_name, selected_date):
+    url = f'http://universe.phys.unm.edu/data/time_series_matrix_data/{device_name}/{selected_date.replace("-", "")}'
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+
+    frequencies = data.get('frequencies', [])
+    timestamps = data.get('timestamps', [])
+    power_values_data = data.get('data', [])
+    power_values = pd.DataFrame(power_values_data).values.T
+
+    if not frequencies or not timestamps or power_values.size == 0:
+        raise ValueError("No data available or missing required keys")
+
+    return frequencies, timestamps, power_values
+
 @callback(
     Output('contour-graph-plot', 'figure'),
+    Output('stats-graph-plot', 'figure'),
     Input('radios-contour', 'value'),
     Input('contour-date-picker-single', 'date'),
 )
-def update_contour_map(device, selected_date):
-    # Directly use the device value from the radio buttons
-    device_name = device
-    
-    # Fetch the data from the Flask endpoint
-    response = requests.get(f'http://universe.phys.unm.edu/data/time_series_matrix_data/{device_name}/{selected_date.replace("-", "")}')
-    
+def update_contour_and_stats(device, selected_date):
     try:
-        response.raise_for_status()  # Raise an error for bad status codes
-        data = response.json()
-
-        # Extract frequencies, timestamps, and data
-        frequencies = data['frequencies']
-        timestamps = data['timestamps']
-        power_values = pd.DataFrame(data['data']).values.T
-
-        # Check if data is available
-        if power_values.size == 0:
-            raise ValueError("No data available")
+        frequencies, timestamps, power_values = get_data(device, selected_date)
 
         # Create the contour plot with specified color scale range and line width
-        fig = go.Figure(data=go.Contour(
+        contour_fig = go.Figure(data=go.Contour(
             z=power_values,
             x=frequencies,
             y=timestamps,
@@ -118,8 +130,8 @@ def update_contour_map(device, selected_date):
         ))
 
         # Update layout for dark theme with custom tick settings
-        fig.update_layout(
-            title=f'{device_name} {selected_date}',
+        contour_fig.update_layout(
+            title=f'{device} {selected_date}',
             xaxis_title='Frequency (GHz)',
             yaxis_title='Timestamp',
             template='plotly_dark',
@@ -133,16 +145,38 @@ def update_contour_map(device, selected_date):
             )
         )
 
-        return fig
-    
+        # Calculate statistics for each frequency
+        stats_df = pd.DataFrame({
+            'Frequency': frequencies,
+            'Min': power_values.min(axis=0),
+            'Max': power_values.max(axis=0),
+            'Median': np.median(power_values, axis=0),
+            'Mean': power_values.mean(axis=0)
+        })
+
+        # Create the statistics plot
+        stats_fig = go.Figure()
+        stats_fig.add_trace(go.Scatter(x=stats_df['Frequency'], y=stats_df['Min'], mode='lines', name='Min'))
+        stats_fig.add_trace(go.Scatter(x=stats_df['Frequency'], y=stats_df['Max'], mode='lines', name='Max'))
+        stats_fig.add_trace(go.Scatter(x=stats_df['Frequency'], y=stats_df['Median'], mode='lines', name='Median'))
+        stats_fig.add_trace(go.Scatter(x=stats_df['Frequency'], y=stats_df['Mean'], mode='lines', name='Mean'))
+
+        # Update layout for dark theme with custom tick settings
+        stats_fig.update_layout(
+            xaxis_title='Frequency (GHz)',
+            yaxis_title='Power',
+            template='plotly_dark'
+        )
+
+        return contour_fig, stats_fig
+
     except (requests.exceptions.RequestException, KeyError, json.decoder.JSONDecodeError, ValueError) as e:
-        print(f"Error: {e}")
-        fig = go.Figure()
-        fig.add_annotation(text="No data available",
-                           xref="paper", yref="paper",
-                           x=0.5, y=0.5, showarrow=False,
-                           font=dict(size=20, color="red"))
-        fig.update_layout(template='plotly_dark',
-                          xaxis=dict(visible=False),
-                          yaxis=dict(visible=False))
-        return fig
+        error_fig = go.Figure()
+        error_fig.add_annotation(text="No data available",
+                                 xref="paper", yref="paper",
+                                 x=0.5, y=0.5, showarrow=False,
+                                 font=dict(size=20, color="red"))
+        error_fig.update_layout(template='plotly_dark',
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False))
+        return error_fig, error_fig
