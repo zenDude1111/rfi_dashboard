@@ -15,8 +15,8 @@ def create_navbar():
     """Creates and returns the navigation bar component."""
     return dbc.NavbarSimple(
         children=[
-            dbc.NavItem(dbc.NavLink("Contours", href="/contour_all")),
-            dbc.NavItem(dbc.NavLink("Daily Metrics", href="/daily_metrics")),
+            #dbc.NavItem(dbc.NavLink("Contours", href="/contour_all")),
+            #dbc.NavItem(dbc.NavLink("Daily Metrics", href="/daily_metrics")),
         ],
         brand="South Pole RFI Dashboard",
         brand_href="/",
@@ -39,10 +39,10 @@ app.layout = html.Div([
     [Input('main-url', 'pathname')]
 )
 def display_page(pathname):
-    if pathname == '/daily_metrics':
-        return daily_metric_plots.layout
-    elif pathname == '/contour_all' or pathname == '/':
-        return plots_page.layout
+    #if pathname == '/daily_metrics':
+        #return daily_metric_plots.layout
+    #elif pathname == '/contour_all' or pathname == '/':
+        #return plots_page.layout
     return plots_page.layout
 
 if __name__ == '__main__':
