@@ -11,7 +11,7 @@ from pages import plots_page, daily_metric_plots
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.DARKLY])
 server = app.server
 
-def create_navbar():
+'''def create_navbar():
     """Creates and returns the navigation bar component."""
     return dbc.NavbarSimple(
         children=[
@@ -22,7 +22,7 @@ def create_navbar():
         brand_href="/",
         color="secondary",
         dark=True,
-    )
+    )'''
 
 def layout_main_page():
     return html.Div([
@@ -30,7 +30,7 @@ def layout_main_page():
 
 app.layout = html.Div([
     dcc.Location(id='main-url', refresh=False),
-    create_navbar(),
+    #create_navbar(),
     html.Div(id='main-page-content'),
 ])
 

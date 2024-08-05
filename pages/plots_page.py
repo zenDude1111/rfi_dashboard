@@ -25,7 +25,7 @@ layout = html.Div(children=[
                             {"label": "SH2-DSL", "value": 'sh2'},
                             {"label": "Anritsu-DSL", "value": 'anritsu'},
                         ],
-                        value='anritsu'  # Set Anritsu as the default selected value
+                        value='sh2'  # Set SH2-DSL as the default selected value
                     ),
                 ], style={'flex': '1', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'flex-start'}),
 
@@ -51,8 +51,8 @@ layout = html.Div(children=[
     dbc.Card(
         dbc.CardBody(
             dcc.Graph(
-                id='contour-graph-plot',
-                style={'height': '800px', 'width': '100%'}
+                id='stats-graph-plot',
+                style={'height': '200px', 'width': '100%'}  # Adjusted height
             )
         ),
         style={'margin': '5px'}
@@ -61,8 +61,8 @@ layout = html.Div(children=[
     dbc.Card(
         dbc.CardBody(
             dcc.Graph(
-                id='stats-graph-plot',
-                style={'height': '400px', 'width': '100%'}
+                id='contour-graph-plot',
+                style={'height': '600px', 'width': '100%'}  # Adjusted height
             )
         ),
         style={'margin': '5px'}
@@ -117,6 +117,9 @@ def update_contour_and_stats(device, selected_date):
     try:
         frequencies, timestamps, power_values = get_data(device, selected_date)
 
+        # Define the common x-axis range
+        xaxis_range = [min(frequencies), max(frequencies)]
+
         # Create the contour plot with specified color scale range and line width
         contour_fig = go.Figure(data=go.Contour(
             z=power_values,
@@ -129,19 +132,20 @@ def update_contour_and_stats(device, selected_date):
             line_width=0  # Set the contour line width
         ))
 
-        # Update layout for dark theme with custom tick settings
+        # Update layout for dark theme with custom tick settings and minimal margins
         contour_fig.update_layout(
-            title=f'{device} {selected_date}',
+            margin=dict(l=10, r=10, t=10, b=10),
             xaxis_title='Frequency (GHz)',
-            yaxis_title='Timestamp',
+            yaxis_title='Time UTC',
             template='plotly_dark',
             xaxis=dict(
                 tickmode='auto',
-                nticks=20  # Increase the number of ticks on the x-axis
+                nticks=20,  # Increase the number of ticks on the x-axis
+                range=xaxis_range
             ),
             yaxis=dict(
                 tickmode='auto',
-                nticks=10  # Reduce the number of ticks on the y-axis
+                nticks=10,  # Reduce the number of ticks on the y-axis
             )
         )
 
@@ -161,11 +165,19 @@ def update_contour_and_stats(device, selected_date):
         stats_fig.add_trace(go.Scatter(x=stats_df['Frequency'], y=stats_df['Median'], mode='lines', name='Median'))
         stats_fig.add_trace(go.Scatter(x=stats_df['Frequency'], y=stats_df['Mean'], mode='lines', name='Mean'))
 
-        # Update layout for dark theme with custom tick settings
+        # Update layout for dark theme with custom tick settings and minimal margins
         stats_fig.update_layout(
+            margin=dict(l=10, r=10, t=10, b=10),
             xaxis_title='Frequency (GHz)',
-            yaxis_title='Power',
-            template='plotly_dark'
+            yaxis_title='Power (dBm)',
+            template='plotly_dark',
+            xaxis=dict(
+                range=xaxis_range  # Ensure the x-axis range matches the contour plot
+            ),
+            yaxis=dict(
+                tickmode='auto',
+                tickformat='.4f'  # Format y-axis ticks to one decimal place
+            )
         )
 
         return contour_fig, stats_fig
@@ -178,5 +190,6 @@ def update_contour_and_stats(device, selected_date):
                                  font=dict(size=20, color="red"))
         error_fig.update_layout(template='plotly_dark',
                                 xaxis=dict(visible=False),
-                                yaxis=dict(visible=False))
+                                yaxis=dict(visible=False),
+                                margin=dict(l=10, r=10, t=10, b=10))
         return error_fig, error_fig
