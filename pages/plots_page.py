@@ -38,9 +38,9 @@ layout = html.Div(children=[
                 html.Div([
                     dbc.Button('Backward', id='contour-backward-button', n_clicks=0, color="secondary", className="me-2"),
                     dcc.DatePickerSingle(
-                        id='contour-date-picker-single',
-                        date=pd.to_datetime('today').strftime('%Y-%m-%d')
-                    ),
+                    id='contour-date-picker-single',
+                    date=(pd.to_datetime('today') - pd.Timedelta(days=1)).strftime('%Y-%m-%d')
+                ),
                     dbc.Button('Forward', id='contour-forward-button', n_clicks=0, color="secondary", className="ms-2"),
                 ], style={'flex': '1', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'flex-end', 'gap': '10px'}),
             ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'gap': '10px'})
