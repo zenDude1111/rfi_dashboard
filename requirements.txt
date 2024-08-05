@@ -9,5 +9,3 @@ scipy
 plotly
 requests
 gunicorn
-
-

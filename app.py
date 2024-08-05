@@ -5,7 +5,7 @@ from dash import Dash, dcc, html, Input, Output, callback_context
 import dash_bootstrap_components as dbc
 
 # Modularized layout imports
-from pages import plots_page, daily_metric_plots
+from pages import plots_page
 
 # Create Dash application instance with external stylesheets for theming
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.DARKLY])
